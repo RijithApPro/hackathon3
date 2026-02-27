@@ -1,0 +1,9 @@
+[project]
+name = "mcp-sandbox"
+version = "0.1.0"
+description = "Small MCP FastMCP sandbox with multiple demo servers/tools"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "mcp>=1.26.0",
+]

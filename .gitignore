@@ -9,6 +9,10 @@ __pycache__/
 # Pytest
 .pytest_cache/
 
+# Local dev envs
+.venv/
+.vscode/
+
 # Build artifacts
 dist/
 build/
