@@ -1,0 +1,29 @@
+{
+	"servers": {
+		"hello_world_new": {
+			"type": "stdio",
+			"command": "uv",
+			"args": ["run", "python", "hello_world_new.py"],
+			"cwd": "${workspaceFolder}/mcp_sandbox"
+		},
+		"test_counter": {
+			"type": "stdio",
+			"command": "uv",
+			"args": ["run", "python", "test_counter.py"],
+			"cwd": "${workspaceFolder}/mcp_sandbox"
+		},
+
+		"mealplan_Leonberg": {
+			"url": "http://10.124.200.123:8000/mcp"
+		},
+
+		"mealplan_Schwieberdingen": {
+			"url": "http://10.124.200.123:8002/mcp"
+		},
+
+		"mealplan_Renningen": {
+			"url": "http://10.124.200.123:8006/mcp"
+		}
+	},
+	"inputs": []
+}
