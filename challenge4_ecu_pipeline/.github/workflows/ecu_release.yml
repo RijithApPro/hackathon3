@@ -1,0 +1,122 @@
+name: ECU Release Pipeline
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  # --------------------------------------------------------------------------
+  # Stage 1 – Lint & static analysis
+  # --------------------------------------------------------------------------
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: challenge4_ecu_pipeline
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install lint tools
+        run: pip install pylint
+
+      - name: Run pylint
+        run: python -m pylint --score=no ecu_pipeline.py
+
+  # --------------------------------------------------------------------------
+  # Stage 2 – Unit tests
+  # --------------------------------------------------------------------------
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: challenge4_ecu_pipeline
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install test dependencies
+        run: pip install pytest
+
+      - name: Run tests
+        run: pytest test_ecu_pipeline.py -v
+
+  # --------------------------------------------------------------------------
+  # Stage 3 – Build artifact
+  # --------------------------------------------------------------------------
+  build:
+    name: Build Artifact
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    defaults:
+      run:
+        working-directory: challenge4_ecu_pipeline
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Release readiness check
+        run: python ecu_pipeline.py check
+
+      - name: Build ECU artifact
+        run: make build ECU_ID=ECU
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ecu-release-artifact
+          path: challenge4_ecu_pipeline/dist/
+
+  # --------------------------------------------------------------------------
+  # Stage 4 – Release (tags only)
+  # --------------------------------------------------------------------------
+  release:
+    name: Publish Release
+    runs-on: ubuntu-latest
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: challenge4_ecu_pipeline
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ecu-release-artifact
+          path: challenge4_ecu_pipeline/dist
+
+      - name: Package release archive
+        run: make release ECU_ID=ECU
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: challenge4_ecu_pipeline/dist/*.tar.gz
+          generate_release_notes: true
