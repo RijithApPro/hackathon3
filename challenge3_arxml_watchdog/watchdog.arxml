@@ -1,0 +1,268 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Challenge 3: ARXML Watchdog Boilerplate
+  AUTOSAR Release 4.3 compliant boilerplate for a Watchdog Manager (WdgM)
+  software component.
+
+  This file contains:
+    - A SoftwareComponent (AtomicSwComponentType) for the Watchdog Manager
+    - A PortInterface for the alive supervision interface
+    - A CompositionSwComponentType that wires the WdgM to an application component
+-->
+<AUTOSAR xmlns="http://autosar.org/schema/r4.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://autosar.org/schema/r4.0 AUTOSAR_4-3-0.xsd">
+
+  <AR-PACKAGES>
+
+    <!-- ================================================================== -->
+    <!--  Package: /Hackathon/Interfaces                                     -->
+    <!-- ================================================================== -->
+    <AR-PACKAGE>
+      <SHORT-NAME>Hackathon</SHORT-NAME>
+      <AR-PACKAGES>
+
+        <AR-PACKAGE>
+          <SHORT-NAME>Interfaces</SHORT-NAME>
+          <ELEMENTS>
+
+            <!-- Sender-Receiver interface for watchdog alive indication -->
+            <SENDER-RECEIVER-INTERFACE>
+              <SHORT-NAME>WdgM_AliveInterface</SHORT-NAME>
+              <IS-SERVICE>false</IS-SERVICE>
+              <DATA-ELEMENTS>
+                <VARIABLE-DATA-PROTOTYPE>
+                  <SHORT-NAME>AliveCounter</SHORT-NAME>
+                  <TYPE-TREF DEST="ImplementationDataType">
+                    /AUTOSAR_Platform/ImplementationDataTypes/uint8
+                  </TYPE-TREF>
+                </VARIABLE-DATA-PROTOTYPE>
+              </DATA-ELEMENTS>
+            </SENDER-RECEIVER-INTERFACE>
+
+            <!-- Client-Server interface for watchdog trigger operation -->
+            <CLIENT-SERVER-INTERFACE>
+              <SHORT-NAME>WdgM_TriggerInterface</SHORT-NAME>
+              <IS-SERVICE>false</IS-SERVICE>
+              <OPERATIONS>
+                <CLIENT-SERVER-OPERATION>
+                  <SHORT-NAME>Trigger</SHORT-NAME>
+                  <ARGUMENTS>
+                    <ARGUMENT-DATA-PROTOTYPE>
+                      <SHORT-NAME>SupervisionEntityId</SHORT-NAME>
+                      <DIRECTION>IN</DIRECTION>
+                      <TYPE-TREF DEST="ImplementationDataType">
+                        /AUTOSAR_Platform/ImplementationDataTypes/uint16
+                      </TYPE-TREF>
+                    </ARGUMENT-DATA-PROTOTYPE>
+                  </ARGUMENTS>
+                  <POSSIBLE-ERROR-REFS>
+                    <POSSIBLE-ERROR-REF DEST="APPLICATION-ERROR">
+                      /Hackathon/Interfaces/WdgM_TriggerInterface/E_NOT_OK
+                    </POSSIBLE-ERROR-REF>
+                  </POSSIBLE-ERROR-REFS>
+                </CLIENT-SERVER-OPERATION>
+              </OPERATIONS>
+              <POSSIBLE-ERRORS>
+                <APPLICATION-ERROR>
+                  <SHORT-NAME>E_NOT_OK</SHORT-NAME>
+                  <ERROR-CODE>1</ERROR-CODE>
+                </APPLICATION-ERROR>
+              </POSSIBLE-ERRORS>
+            </CLIENT-SERVER-INTERFACE>
+
+          </ELEMENTS>
+        </AR-PACKAGE>
+
+        <!-- ============================================================== -->
+        <!--  Package: /Hackathon/Components                                 -->
+        <!-- ============================================================== -->
+        <AR-PACKAGE>
+          <SHORT-NAME>Components</SHORT-NAME>
+          <ELEMENTS>
+
+            <!-- Watchdog Manager Component -->
+            <ATOMIC-SW-COMPONENT-TYPE>
+              <SHORT-NAME>WdgM_Component</SHORT-NAME>
+              <PORTS>
+
+                <!-- Provided port: exposes Trigger service to application -->
+                <P-PORT-PROTOTYPE>
+                  <SHORT-NAME>WdgM_TriggerPort</SHORT-NAME>
+                  <PROVIDED-INTERFACE-TREF DEST="CLIENT-SERVER-INTERFACE">
+                    /Hackathon/Interfaces/WdgM_TriggerInterface
+                  </PROVIDED-INTERFACE-TREF>
+                </P-PORT-PROTOTYPE>
+
+                <!-- Required port: reads alive counter from application -->
+                <R-PORT-PROTOTYPE>
+                  <SHORT-NAME>WdgM_AlivePort</SHORT-NAME>
+                  <REQUIRED-INTERFACE-TREF DEST="SENDER-RECEIVER-INTERFACE">
+                    /Hackathon/Interfaces/WdgM_AliveInterface
+                  </REQUIRED-INTERFACE-TREF>
+                </R-PORT-PROTOTYPE>
+
+              </PORTS>
+              <INTERNAL-BEHAVIORS>
+                <SWC-INTERNAL-BEHAVIOR>
+                  <SHORT-NAME>WdgM_InternalBehavior</SHORT-NAME>
+
+                  <!-- Supervision runnable – called every 10 ms -->
+                  <RUNNABLES>
+                    <RUNNABLE-ENTITY>
+                      <SHORT-NAME>WdgM_MainFunction</SHORT-NAME>
+                      <MINIMUM-START-INTERVAL>0</MINIMUM-START-INTERVAL>
+                      <CAN-BE-INVOKED-CONCURRENTLY>false</CAN-BE-INVOKED-CONCURRENTLY>
+                      <DATA-RECEIVE-ERROR-EVENT-REFS/>
+                      <SYMBOL>WdgM_MainFunction</SYMBOL>
+                    </RUNNABLE-ENTITY>
+
+                    <!-- Initialisation runnable -->
+                    <RUNNABLE-ENTITY>
+                      <SHORT-NAME>WdgM_Init</SHORT-NAME>
+                      <MINIMUM-START-INTERVAL>0</MINIMUM-START-INTERVAL>
+                      <CAN-BE-INVOKED-CONCURRENTLY>false</CAN-BE-INVOKED-CONCURRENTLY>
+                      <SYMBOL>WdgM_Init</SYMBOL>
+                    </RUNNABLE-ENTITY>
+                  </RUNNABLES>
+
+                  <!-- Timing events -->
+                  <EVENTS>
+                    <TIMING-EVENT>
+                      <SHORT-NAME>WdgM_MainFunction_10ms</SHORT-NAME>
+                      <START-ON-EVENT-REF DEST="RUNNABLE-ENTITY">
+                        /Hackathon/Components/WdgM_Component/WdgM_InternalBehavior/WdgM_MainFunction
+                      </START-ON-EVENT-REF>
+                      <PERIOD>0.01</PERIOD>
+                    </TIMING-EVENT>
+
+                    <INIT-EVENT>
+                      <SHORT-NAME>WdgM_Init_Event</SHORT-NAME>
+                      <START-ON-EVENT-REF DEST="RUNNABLE-ENTITY">
+                        /Hackathon/Components/WdgM_Component/WdgM_InternalBehavior/WdgM_Init
+                      </START-ON-EVENT-REF>
+                    </INIT-EVENT>
+                  </EVENTS>
+
+                </SWC-INTERNAL-BEHAVIOR>
+              </INTERNAL-BEHAVIORS>
+            </ATOMIC-SW-COMPONENT-TYPE>
+
+            <!-- Application component that is supervised by WdgM -->
+            <ATOMIC-SW-COMPONENT-TYPE>
+              <SHORT-NAME>App_Component</SHORT-NAME>
+              <PORTS>
+
+                <!-- Required port: calls WdgM_Trigger to report liveness -->
+                <R-PORT-PROTOTYPE>
+                  <SHORT-NAME>App_TriggerPort</SHORT-NAME>
+                  <REQUIRED-INTERFACE-TREF DEST="CLIENT-SERVER-INTERFACE">
+                    /Hackathon/Interfaces/WdgM_TriggerInterface
+                  </REQUIRED-INTERFACE-TREF>
+                </R-PORT-PROTOTYPE>
+
+                <!-- Provided port: sends alive counter to WdgM -->
+                <P-PORT-PROTOTYPE>
+                  <SHORT-NAME>App_AlivePort</SHORT-NAME>
+                  <PROVIDED-INTERFACE-TREF DEST="SENDER-RECEIVER-INTERFACE">
+                    /Hackathon/Interfaces/WdgM_AliveInterface
+                  </PROVIDED-INTERFACE-TREF>
+                </P-PORT-PROTOTYPE>
+
+              </PORTS>
+              <INTERNAL-BEHAVIORS>
+                <SWC-INTERNAL-BEHAVIOR>
+                  <SHORT-NAME>App_InternalBehavior</SHORT-NAME>
+
+                  <RUNNABLES>
+                    <RUNNABLE-ENTITY>
+                      <SHORT-NAME>App_MainFunction</SHORT-NAME>
+                      <MINIMUM-START-INTERVAL>0</MINIMUM-START-INTERVAL>
+                      <CAN-BE-INVOKED-CONCURRENTLY>false</CAN-BE-INVOKED-CONCURRENTLY>
+                      <SYMBOL>App_MainFunction</SYMBOL>
+                    </RUNNABLE-ENTITY>
+                  </RUNNABLES>
+
+                  <EVENTS>
+                    <TIMING-EVENT>
+                      <SHORT-NAME>App_MainFunction_10ms</SHORT-NAME>
+                      <START-ON-EVENT-REF DEST="RUNNABLE-ENTITY">
+                        /Hackathon/Components/App_Component/App_InternalBehavior/App_MainFunction
+                      </START-ON-EVENT-REF>
+                      <PERIOD>0.01</PERIOD>
+                    </TIMING-EVENT>
+                  </EVENTS>
+
+                </SWC-INTERNAL-BEHAVIOR>
+              </INTERNAL-BEHAVIORS>
+            </ATOMIC-SW-COMPONENT-TYPE>
+
+            <!-- Composition wiring WdgM ↔ App -->
+            <COMPOSITION-SW-COMPONENT-TYPE>
+              <SHORT-NAME>WdgM_App_Composition</SHORT-NAME>
+              <COMPONENTS>
+                <SW-COMPONENT-PROTOTYPE>
+                  <SHORT-NAME>WdgM_Instance</SHORT-NAME>
+                  <TYPE-TREF DEST="ATOMIC-SW-COMPONENT-TYPE">
+                    /Hackathon/Components/WdgM_Component
+                  </TYPE-TREF>
+                </SW-COMPONENT-PROTOTYPE>
+                <SW-COMPONENT-PROTOTYPE>
+                  <SHORT-NAME>App_Instance</SHORT-NAME>
+                  <TYPE-TREF DEST="ATOMIC-SW-COMPONENT-TYPE">
+                    /Hackathon/Components/App_Component
+                  </TYPE-TREF>
+                </SW-COMPONENT-PROTOTYPE>
+              </COMPONENTS>
+              <CONNECTORS>
+                <!-- Alive counter: App → WdgM -->
+                <ASSEMBLY-SW-CONNECTOR>
+                  <SHORT-NAME>AliveCounter_Connector</SHORT-NAME>
+                  <PROVIDER-IREF>
+                    <CONTEXT-COMPONENT-REF DEST="SW-COMPONENT-PROTOTYPE">
+                      /Hackathon/Components/WdgM_App_Composition/App_Instance
+                    </CONTEXT-COMPONENT-REF>
+                    <TARGET-P-PORT-REF DEST="P-PORT-PROTOTYPE">
+                      /Hackathon/Components/App_Component/App_AlivePort
+                    </TARGET-P-PORT-REF>
+                  </PROVIDER-IREF>
+                  <REQUESTER-IREF>
+                    <CONTEXT-COMPONENT-REF DEST="SW-COMPONENT-PROTOTYPE">
+                      /Hackathon/Components/WdgM_App_Composition/WdgM_Instance
+                    </CONTEXT-COMPONENT-REF>
+                    <TARGET-R-PORT-REF DEST="R-PORT-PROTOTYPE">
+                      /Hackathon/Components/WdgM_Component/WdgM_AlivePort
+                    </TARGET-R-PORT-REF>
+                  </REQUESTER-IREF>
+                </ASSEMBLY-SW-CONNECTOR>
+                <!-- Trigger: App ← WdgM -->
+                <ASSEMBLY-SW-CONNECTOR>
+                  <SHORT-NAME>Trigger_Connector</SHORT-NAME>
+                  <PROVIDER-IREF>
+                    <CONTEXT-COMPONENT-REF DEST="SW-COMPONENT-PROTOTYPE">
+                      /Hackathon/Components/WdgM_App_Composition/WdgM_Instance
+                    </CONTEXT-COMPONENT-REF>
+                    <TARGET-P-PORT-REF DEST="P-PORT-PROTOTYPE">
+                      /Hackathon/Components/WdgM_Component/WdgM_TriggerPort
+                    </TARGET-P-PORT-REF>
+                  </PROVIDER-IREF>
+                  <REQUESTER-IREF>
+                    <CONTEXT-COMPONENT-REF DEST="SW-COMPONENT-PROTOTYPE">
+                      /Hackathon/Components/WdgM_App_Composition/App_Instance
+                    </CONTEXT-COMPONENT-REF>
+                    <TARGET-R-PORT-REF DEST="R-PORT-PROTOTYPE">
+                      /Hackathon/Components/App_Component/App_TriggerPort
+                    </TARGET-R-PORT-REF>
+                  </REQUESTER-IREF>
+                </ASSEMBLY-SW-CONNECTOR>
+              </CONNECTORS>
+            </COMPOSITION-SW-COMPONENT-TYPE>
+
+          </ELEMENTS>
+        </AR-PACKAGE>
+
+      </AR-PACKAGES>
+    </AR-PACKAGE>
+
+  </AR-PACKAGES>
+</AUTOSAR>
